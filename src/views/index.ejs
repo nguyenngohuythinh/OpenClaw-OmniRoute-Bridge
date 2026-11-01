@@ -2,14 +2,114 @@
 <html lang="vi">
 <head>
     <meta charset="UTF-8">
-    <title>OpenClaw OmniRoute Bridge</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OpenClaw OmniRoute Bridge - Dashboard</title>
+    <link rel="stylesheet" href="/css/style.css">
 </head>
 <body>
-    <h1>OpenClaw OmniRoute Bridge</h1>
-    <form action="/connect" method="POST">
-        <input type="text" name="baseUrl" placeholder="Base URL (http://127.0.0.1:20128/v1)" required>
-        <input type="password" name="apiKey" placeholder="API Key" required>
-        <button type="submit">Kiểm tra kết nối</button>
-    </form>
+    <div class="container">
+        <h1>OpenClaw OmniRoute Bridge</h1>
+        
+        <div class="section">
+            <h2>Kết nối OmniRoute</h2>
+            <form id="omni-form">
+                <div class="form-group">
+                    <label for="baseUrl">Base URL</label>
+                    <input type="text" id="baseUrl" name="baseUrl" value="http://127.0.0.1:20128/v1" required>
+                </div>
+                <div class="form-group">
+                    <label for="apiKey">API Key</label>
+                    <input type="password" id="apiKey" name="apiKey" placeholder="Nhập API Key của bạn" required>
+                </div>
+                <button type="button" onclick="checkConnection()">Kiểm tra kết nối</button>
+            </form>
+            <div id="connection-status" class="status" style="display:none;"></div>
+        </div>
+
+        <div class="section" id="model-section" style="display:none;">
+            <h2>Danh sách Model</h2>
+            <div class="form-group">
+                <select id="model-select" style="width:100%; padding:10px;"></select>
+            </div>
+            <button type="button" onclick="configureOpenClaw()">Cấu hình OpenClaw</button>
+        </div>
+
+        <div class="section">
+            <h2>Trạng thái OpenClaw</h2>
+            <div id="openclaw-status">Đang kiểm tra...</div>
+        </div>
+    </div>
+
+    <script>
+        async function checkConnection() {
+            const baseUrl = document.getElementById('baseUrl').value;
+            const apiKey = document.getElementById('apiKey').value;
+            const statusDiv = document.getElementById('connection-status');
+            
+            statusDiv.style.display = 'block';
+            statusDiv.className = 'status';
+            statusDiv.innerText = 'Đang kiểm tra...';
+
+            try {
+                const response = await fetch('/api/omniroute/check', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ baseUrl, apiKey })
+                });
+                const result = await response.json();
+
+                if (result.connected) {
+                    statusDiv.className = 'status status-success';
+                    statusDiv.innerText = 'Kết nối thành công!';
+                    loadModels(result.models);
+                } else {
+                    statusDiv.className = 'status status-error';
+                    statusDiv.innerText = 'Kết nối thất bại: ' + result.error;
+                }
+            } catch (err) {
+                statusDiv.className = 'status status-error';
+                statusDiv.innerText = 'Lỗi hệ thống: ' + err.message;
+            }
+        }
+
+        function loadModels(models) {
+            const section = document.getElementById('model-section');
+            const select = document.getElementById('model-select');
+            select.innerHTML = '';
+            models.forEach(m => {
+                const opt = document.createElement('option');
+                opt.value = m.id;
+                opt.innerText = m.id;
+                select.appendChild(opt);
+            });
+            section.style.display = 'block';
+        }
+
+        async function configureOpenClaw() {
+            const model = document.getElementById('model-select').value;
+            const baseUrl = document.getElementById('baseUrl').value;
+            const apiKey = document.getElementById('apiKey').value;
+
+            try {
+                const response = await fetch('/api/openclaw/configure', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ baseUrl, apiKey, model })
+                });
+                const result = await response.json();
+                alert(result.message);
+            } catch (err) {
+                alert('Lỗi: ' + err.message);
+            }
+        }
+
+        async function checkOpenClaw() {
+            const res = await fetch('/api/openclaw/status');
+            const data = await res.json();
+            document.getElementById('openclaw-status').innerText = data.installed ? 'Đã cài đặt' : 'Chưa tìm thấy OpenClaw';
+        }
+
+        checkOpenClaw();
+    </script>
 </body>
 </html>
