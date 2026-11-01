@@ -12,6 +12,10 @@ export class OpenClawService {
         }
     }
 
+    async getConfigPath(): Promise<string> {
+        return path.join(process.env.USERPROFILE || '', '.openclaw', 'config.json');
+    }
+
     async backupConfig(configPath: string): Promise<void> {
         if (fs.existsSync(configPath)) {
             const backupPath = `${configPath}.${Date.now()}.bak`;
@@ -28,7 +32,6 @@ export class OpenClawService {
             config = JSON.parse(fs.readFileSync(configPath, 'utf8'));
         }
 
-        // Cấu hình mẫu cho OpenClaw provider
         config.providers = config.providers || [];
         const providerIndex = config.providers.findIndex((p: any) => p.id === 'omniroute');
         

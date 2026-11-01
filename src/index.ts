@@ -1,10 +1,14 @@
 import express from 'express';
 import path from 'path';
-import { OmniRouteService } from './services/omniroute';
-import { OpenClawService } from './services/openclaw';
+import { fileURLToPath } from 'url';
+import { OmniRouteService } from './services/omniroute.js';
+import { OpenClawService } from './services/openclaw.js';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const app = express();
-const port = 3000; // Cổng cho Bridge Dashboard
+const port = 3000;
 
 app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, 'views'));
@@ -30,7 +34,7 @@ app.post('/api/omniroute/check', async (req, res) => {
         } else {
             res.json({ connected: false, error: 'Không thể truy cập API' });
         }
-    } catch (error) {
+    } catch (error: any) {
         res.json({ connected: false, error: error.message });
     }
 });
@@ -45,7 +49,7 @@ app.post('/api/openclaw/configure', async (req, res) => {
     try {
         await openClawService.updateConfig(baseUrl, apiKey, model);
         res.json({ message: 'Đã cập nhật cấu hình OpenClaw thành công và tạo bản sao lưu.' });
-    } catch (error) {
+    } catch (error: any) {
         res.status(500).json({ message: 'Lỗi cấu hình: ' + error.message });
     }
 });

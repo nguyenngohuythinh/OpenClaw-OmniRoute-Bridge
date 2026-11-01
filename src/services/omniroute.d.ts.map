@@ -1,0 +1,1 @@
+{"version":3,"file":"omniroute.d.ts","sourceRoot":"","sources":["omniroute.ts"],"names":[],"mappings":"AAEA,qBAAa,gBAAgB;IACzB,OAAO,CAAC,MAAM,CAAgB;IAE9B,YAAY,OAAO,EAAE,MAAM,EAAE,MAAM,EAAE,MAAM,EAQ1C;IAEK,eAAe,IAAI,OAAO,CAAC,OAAO,CAAC,CAOxC;IAEK,SAAS,IAAI,OAAO,CAAC,GAAG,EAAE,CAAC,CAOhC;CACJ"}

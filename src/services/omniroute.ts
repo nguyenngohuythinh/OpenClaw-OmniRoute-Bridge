@@ -1,4 +1,4 @@
-import axios, { AxiosInstance } from 'axios';
+import axios, { type AxiosInstance } from 'axios';
 
 export class OmniRouteService {
     private client: AxiosInstance;
@@ -26,7 +26,7 @@ export class OmniRouteService {
         try {
             const response = await this.client.get('/models');
             return response.data.data;
-        } catch (error) {
+        } catch (error: any) {
             throw new Error('Failed to fetch models: ' + error.message);
         }
     }
