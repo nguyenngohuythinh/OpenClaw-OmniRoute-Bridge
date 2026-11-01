@@ -42,8 +42,12 @@ app.get('/api/openclaw/status', async (req, res) => {
 
 app.post('/api/openclaw/configure', async (req, res) => {
     const { baseUrl, apiKey, model } = req.body;
-    // Tạm thời trả về thông báo, logic ghi file sẽ hoàn thiện sau
-    res.json({ message: `Đã nhận yêu cầu cấu hình OpenClaw với model ${model}` });
+    try {
+        await openClawService.updateConfig(baseUrl, apiKey, model);
+        res.json({ message: 'Đã cập nhật cấu hình OpenClaw thành công và tạo bản sao lưu.' });
+    } catch (error) {
+        res.status(500).json({ message: 'Lỗi cấu hình: ' + error.message });
+    }
 });
 
 app.listen(port, () => {
