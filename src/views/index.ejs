@@ -31,7 +31,12 @@
             <div class="form-group">
                 <select id="model-select" style="width:100%; padding:10px;"></select>
             </div>
-            <button type="button" onclick="configureOpenClaw()">Cấu hình OpenClaw</button>
+            <button type="button" onclick="testChat()">Thử nghiệm Chat</button>
+            <div class="form-group" style="margin-top:10px;">
+                <input type="text" id="chat-prompt" placeholder="Nhập tin nhắn test...">
+            </div>
+            <div id="chat-result" style="margin-top:10px; padding:10px; border:1px solid #ddd; display:none;"></div>
+            <button type="button" onclick="configureOpenClaw()" style="margin-top:10px; background-color: #27ae60;">Cấu hình OpenClaw</button>
         </div>
 
         <div class="section">
@@ -85,10 +90,42 @@
             section.style.display = 'block';
         }
 
+        async function testChat() {
+            const model = document.getElementById('model-select').value;
+            const baseUrl = document.getElementById('baseUrl').value;
+            const apiKey = document.getElementById('apiKey').value;
+            const prompt = document.getElementById('chat-prompt').value;
+            const resultDiv = document.getElementById('chat-result');
+
+            if (!prompt) { alert('Vui lòng nhập nội dung test'); return; }
+
+            resultDiv.style.display = 'block';
+            resultDiv.innerText = 'Đang gửi...';
+
+            try {
+                const response = await fetch('/api/omniroute/test', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ baseUrl, apiKey, model, prompt })
+                });
+                const result = await response.json();
+
+                if (result.success) {
+                    resultDiv.innerText = 'Kết quả: ' + result.result;
+                } else {
+                    resultDiv.innerText = 'Lỗi: ' + result.error;
+                }
+            } catch (err) {
+                resultDiv.innerText = 'Lỗi hệ thống: ' + err.message;
+            }
+        }
+
         async function configureOpenClaw() {
             const model = document.getElementById('model-select').value;
             const baseUrl = document.getElementById('baseUrl').value;
             const apiKey = document.getElementById('apiKey').value;
+
+            if (!confirm('Bạn có chắc chắn muốn cập nhật cấu hình OpenClaw với model: ' + model + '?')) return;
 
             try {
                 const response = await fetch('/api/openclaw/configure', {

@@ -39,6 +39,17 @@ app.post('/api/omniroute/check', async (req, res) => {
     }
 });
 
+app.post('/api/omniroute/test', async (req, res) => {
+    const { baseUrl, apiKey, model, prompt } = req.body;
+    try {
+        const omniRoute = new OmniRouteService(baseUrl, apiKey);
+        const result = await omniRoute.testChat(model, prompt);
+        res.json({ success: true, result });
+    } catch (error: any) {
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
 app.get('/api/openclaw/status', async (req, res) => {
     const installed = await openClawService.isInstalled();
     res.json({ installed });
