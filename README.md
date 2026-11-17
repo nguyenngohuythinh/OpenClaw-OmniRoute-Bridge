@@ -63,7 +63,7 @@ Bridge hỗ trợ thiết lập kết nối và cấu hình; các yêu cầu AI 
 ## 🖥️ Yêu cầu hệ thống
 
 - Windows 10/11 (mục tiêu hỗ trợ chính).
-- Node.js 18 trở lên.
+- Node.js 22 trở lên (OpenClaw/OmniRoute có thể yêu cầu phiên bản mới hơn).
 - npm.
 - Git (nếu cài đặt bằng cách clone repository).
 - OpenClaw đã được cài đặt.
@@ -79,6 +79,7 @@ Mở PowerShell hoặc Terminal:
 git clone https://github.com/nguyenngohuythinh/OpenClaw-OmniRoute-Bridge.git
 cd OpenClaw-OmniRoute-Bridge
 npm install
+npm run build
 npm start
 ```
 
@@ -86,12 +87,15 @@ Sau khi ứng dụng khởi động, mở:
 
 **http://localhost:3000**
 
+Bridge chỉ bind `127.0.0.1`; không mở ra mạng LAN.
+
 ### Nếu PowerShell báo lỗi npm.ps1
 
 Một số máy Windows chặn script PowerShell theo Execution Policy. Có thể gọi trực tiếp file CMD của npm:
 
 ```powershell
 npm.cmd install
+npm.cmd run build
 npm.cmd start
 ```
 
@@ -123,6 +127,39 @@ Tên trường và định dạng cấu hình có thể thay đổi theo phiên 
 - Giữ lại bản sao lưu trước khi thay đổi cấu hình.
 - Thu hồi và tạo lại key nếu nghi ngờ key đã bị lộ.
 - Kiểm tra nội dung mã nguồn và quyền truy cập trước khi chạy trên máy quan trọng.
+
+## V2 Foundation — nhánh `feature/v2-foundation`
+
+Phase 1 đã bổ sung system health, CLI/runtime detection, cấu hình đã validate, Start/Stop/Restart và logs. Chưa triển khai chat/agents/tasks. Phép thử model hiện tại gọi OmniRoute trực tiếp để chẩn đoán API; đây không phải chat với OpenClaw.
+
+- `GET /api/system/health`: trạng thái Bridge, OpenClaw và catalog OmniRoute.
+- `GET /api/openclaw/status`: CLI/version, running, reachable, PID, đường dẫn config và model hiện tại. `running: null` nghĩa là chưa xác định được.
+- `POST /api/openclaw/start`, `/stop`, `/restart`: dùng Gateway service chính thức của OpenClaw; thao tác đồng thời trả `OPENCLAW_BUSY`.
+- `GET /api/openclaw/logs?lines=100`: tối đa 500 dòng, bounded output và redaction. Nếu CLI logs không hoạt động, trả operation logs của Bridge cùng `source`/`code`.
+- Giữ `POST /api/omniroute/check`, `/test`, `POST /api/openclaw/configure`.
+
+Luồng UI: nhập origin hoặc `/v1` và API key → kiểm tra catalog → chọn model → áp dụng cấu hình → restart nếu cần. Checkbox restart là tùy chọn. Model phải xuất hiện trong catalog; điều này chưa đảm bảo provider có thể inference. Models API có thể cho truy cập không xác thực, vì vậy `apiKeyStatus: not_verified` là có chủ ý. Phép thử model có thể phát sinh phí.
+
+Bridge lấy đường dẫn config từ `openclaw config file --json`, hỗ trợ profile/environment của CLI. Ghi `models.providers.omniroute` và `agents.defaults.model.primary`, giữ provider khác/fallback/model allowlist. Backup nguyên bản được tạo trước khi thay thế; CLI validate candidate và file đích, rollback khi validation thất bại. File JSON5 sẽ được chuẩn hóa thành JSON. Config có `$include` hoặc symlink được từ chối để tránh ghi sai nguồn. Không tự chuyển file `config.json` cũ sang `openclaw.json`.
+
+Nếu chưa có OpenClaw config/service, chuẩn bị một lần bằng CLI chính thức:
+
+```powershell
+openclaw onboard
+openclaw gateway install
+```
+
+Bridge không tự cài service, không dùng ExecutionPolicy hệ thống và không kill mọi tiến trình Node. Nếu được báo operation chưa xác nhận, kiểm tra trạng thái trước khi thử lại.
+
+Cấu hình Bridge bằng biến môi trường (xem `.env.example`; ứng dụng không tự load `.env`): `PORT`, `OPENCLAW_COMMAND`, `OMNIROUTE_BASE_URL`, `OMNIROUTE_API_KEY`. Các biến `OPENCLAW_PROFILE`, `OPENCLAW_STATE_DIR`, `OPENCLAW_CONFIG_PATH` được chuyển nguyên cho CLI. API key nhập trong UI chỉ giữ trong RAM của Bridge cho lần kết nối, và trong config OpenClaw khi Apply. Không dùng localStorage hoặc render lại key.
+
+```powershell
+$env:OPENCLAW_COMMAND = "C:\Users\YOUR_USER\AppData\Roaming\npm\openclaw.cmd"
+$env:OMNIROUTE_BASE_URL = "http://127.0.0.1:20128"
+npm.cmd start
+```
+
+Chạy `npm test` để kiểm tra fixture integration; [audit và kế hoạch](docs/V2-FOUNDATION-AUDIT.md), [runbook và giới hạn kiểm chứng](docs/V2-VALIDATION.md). Windows cần chạy thêm kiểm tra thực tế service/permissions, không thể kết luận từ fixture Linux.
 
 ## 🗺️ Định hướng phát triển
 
