@@ -26,15 +26,21 @@ export function createApp(cli = new ProcessService()) {
     res.setHeader('Content-Security-Policy', "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; frame-ancestors 'none'; form-action 'self'");
     const host = req.headers.host || '';
     if (!/^(localhost|127\.0\.0\.1)(:\d+)?$/.test(host)) return next(new ApiError('INVALID_HOST', 'Use the local Bridge address.', 403));
+    next();
+  });
+  // Public GET/HEAD handlers must allow navigation from external links. Host
+  // validation still runs first; other requests fall through to the API guards.
+  app.set('view engine', 'ejs'); app.set('views', path.join(projectRoot, 'src/views'));
+  app.use(express.static(path.join(projectRoot, 'src/public')));
+  app.get('/', (_req, res) => { res.render('index', { defaultBaseUrl: bridgeConfig.omniBaseUrl }); });
+  app.use((req, _res, next) => {
+    const host = req.headers.host || '';
     if (req.headers.origin && req.headers.origin !== `http://${host}`) return next(new ApiError('INVALID_ORIGIN', 'Cross-origin requests are not allowed.', 403));
     if (req.headers['sec-fetch-site'] === 'cross-site') return next(new ApiError('INVALID_ORIGIN', 'Cross-site requests are not allowed.', 403));
     if (req.method === 'POST' && !req.is('application/json')) return next(new ApiError('JSON_REQUIRED', 'Use application/json.', 415));
     next();
   });
   app.use(express.json({ limit: '32kb' }));
-  app.set('view engine', 'ejs'); app.set('views', path.join(projectRoot, 'src/views'));
-  app.use(express.static(path.join(projectRoot, 'src/public')));
-  app.get('/', (_req, res) => { res.render('index', { defaultBaseUrl: bridgeConfig.omniBaseUrl }); });
   app.use('/api/system', systemRoutes(health));
   app.use('/api/openclaw', openclawRoutes(openclaw, omni, health));
   app.use('/api/omniroute', omniRouteRoutes(omni, health));

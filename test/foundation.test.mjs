@@ -181,6 +181,61 @@ test('HTTP rejects foreign origins, DNS rebinding hosts and non-JSON writes', as
   });
   assert.equal(hostStatus, 403);
 });
+test('cross-site GET/HEAD dashboard navigation and static assets remain public on loopback hosts', async t => {
+  const f = await fixture(t); const url = await listen(t, createApp(f.cli));
+  for (const host of ['localhost', '127.0.0.1']) {
+    for (const route of ['/', '/css/style.css', '/js/dashboard.js']) {
+      for (const method of ['GET', 'HEAD']) {
+        const response = await new Promise((resolve, reject) => {
+          const req = http.request(url + route, { method, headers: {
+            Host: `${host}:${new URL(url).port}`,
+            'Sec-Fetch-Site': 'cross-site',
+            ...(route === '/' ? { 'Sec-Fetch-Mode': 'navigate', 'Sec-Fetch-Dest': 'document' }
+              : { Origin: 'https://external.invalid' }),
+          } }, res => {
+            let body = ''; res.setEncoding('utf8'); res.on('data', chunk => { body += chunk; });
+            res.on('end', () => resolve({ status: res.statusCode, body }));
+          });
+          req.on('error', reject); req.end();
+        });
+        assert.equal(response.status, 200, `${method} ${route} on ${host}`);
+        if (method === 'HEAD') assert.equal(response.body, '');
+        else if (route === '/') assert.ok(response.body.includes('System health'));
+        else assert.ok(response.body.length > 0);
+      }
+    }
+  }
+});
+test('cross-site metadata still blocks API reads and mutations before any CLI work', async t => {
+  const f = await fixture(t); const url = await listen(t, createApp(f.cli));
+  for (const route of ['/api/openclaw/status', '/api/openclaw/logs', '/api/system/health']) {
+    const response = await fetch(url + route, { headers: { 'Sec-Fetch-Site': 'cross-site', 'Sec-Fetch-Mode': 'navigate' } });
+    assert.equal(response.status, 403);
+    assert.equal((await response.json()).code, 'INVALID_ORIGIN');
+  }
+  for (const route of ['/api/openclaw/start', '/api/openclaw/stop', '/api/openclaw/restart', '/api/openclaw/configure', '/api/omniroute/check', '/api/omniroute/test', '/', '/js/dashboard.js']) {
+    // No Origin header: Fetch Metadata must independently reject the mutation.
+    const response = await fetch(url + route, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Sec-Fetch-Site': 'cross-site' }, body: '{}' });
+    assert.equal(response.status, 403, route);
+    assert.equal((await response.json()).code, 'INVALID_ORIGIN');
+  }
+  assert.equal((await fetch(url + '/api/openclaw/status', { headers: { Origin: 'https://external.invalid' } })).status, 403);
+  assert.equal(f.state.calls.length, 0);
+});
+test('public navigation and static handlers do not bypass host validation', async t => {
+  const f = await fixture(t); const url = await listen(t, createApp(f.cli));
+  for (const route of ['/', '/css/style.css', '/js/dashboard.js']) {
+    const result = await new Promise((resolve, reject) => {
+      const req = http.get(url + route, { headers: { Host: 'external.invalid', 'Sec-Fetch-Site': 'cross-site' } }, res => {
+        let body = ''; res.setEncoding('utf8'); res.on('data', chunk => { body += chunk; });
+        res.on('end', () => resolve({ status: res.statusCode, body: JSON.parse(body) }));
+      });
+      req.on('error', reject);
+    });
+    assert.equal(result.status, 403);
+    assert.equal(result.body.code, 'INVALID_HOST');
+  }
+});
 test('process adapter reports missing executable and kills timed-out own process', async () => {
   await assert.rejects(new ProcessService(path.join(os.tmpdir(), 'nonexistent-bridge-executable')).run(['--version']), { code: 'OPENCLAW_NOT_INSTALLED' });
   await assert.rejects(new ProcessService(process.execPath).run(['-e', 'setInterval(()=>{},1000)'], {}, 100), { code: 'OPENCLAW_TIMEOUT' });
