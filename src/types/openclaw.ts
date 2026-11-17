@@ -10,5 +10,20 @@ export interface OpenClawStatus {
   currentModel: string | null;
   gatewayPort: number | null;
   code: string;
+  message: string;
+  checkedAt: string;
+  operation: RuntimeOperation | null;
 }
 export type RuntimeAction = 'start' | 'stop' | 'restart';
+
+export interface RuntimeOperation {
+  action: RuntimeAction | 'configure';
+  startedAt: string;
+  timeoutMs: number;
+}
+export interface RuntimePolicy {
+  actionTimeoutMs: number;
+  commandTimeoutMs: number;
+  confirmationAttempts: number;
+  confirmationDelayMs: number;
+}

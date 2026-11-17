@@ -2,15 +2,47 @@
 <html lang="vi">
 <head>
   <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>OpenClaw OmniRoute Bridge — Local AI Control Center</title>
-  <link rel="stylesheet" href="/css/style.css"><script src="/js/dashboard.js" defer></script>
+  <title>OpenClaw Control Center — Bridge</title>
+  <link rel="stylesheet" href="/css/style.css"><script type="module" src="/js/dashboard.js"></script>
 </head>
-<body><main class="container">
-  <h1>OpenClaw OmniRoute Bridge</h1><p class="subtitle">Local AI Control Center · V2 Foundation</p>
-  <section class="section"><h2>System health</h2>
-    <div id="system-health" aria-live="polite">Đang kiểm tra…</div>
-    <button id="refresh" type="button">Làm mới trạng thái</button>
+<body>
+<aside class="sidebar">
+  <a class="brand" href="#overview"><span class="brand-icon">OC</span><span>OpenClaw <small>CONTROL CENTER</small></span></a>
+  <div class="nav-label">WORKSPACE</div>
+  <nav aria-label="Điều hướng"><a class="nav-item" href="#overview">◫ <span>Tổng quan</span></a><a class="nav-item" href="#runtime">▷ <span>Runtime</span></a><a class="nav-item" href="#logs-panel">≡ <span>Logs</span></a><a class="nav-item" href="#connections">⇄ <span>Connections</span></a></nav>
+  <div class="sidebar-footer"><span class="local-dot"></span> Local workspace<small>OpenClaw × Bridge</small></div>
+</aside>
+<main class="workspace" id="overview">
+  <header class="page-header"><div><p class="eyebrow">YOUR LOCAL AI WORKSPACE</p><h1>OpenClaw Control Center</h1><p class="subtitle">Điều khiển Gateway và theo dõi OpenClaw trên máy của bạn.</p></div><span class="local-badge">● Local only</span></header>
+  <section aria-labelledby="health-title">
+    <div class="section-heading"><h2 id="health-title">System health</h2><div class="health-toolbar"><span id="last-updated">Chưa cập nhật</span><button id="refresh" class="button secondary small" type="button">↻ Làm mới</button></div></div>
+    <div class="status-grid" id="system-health" aria-live="polite">
+      <article class="status-card"><div class="card-label">Bridge <span class="card-icon">◈</span></div><strong id="bridge-state">Đang kiểm tra</strong><span id="bridge-version" class="muted">Local server</span></article>
+      <article class="status-card"><div class="card-label">OpenClaw <span class="card-icon">◇</span></div><strong id="openclaw-state">Đang kiểm tra</strong><span id="openclaw-version" class="muted">CLI chưa xác định</span></article>
+      <article class="status-card"><div class="card-label">Gateway <span class="card-icon">⇄</span></div><strong id="gateway-state">Đang kiểm tra</strong><span id="gateway-port" class="muted">Port —</span></article>
+      <article class="status-card"><div class="card-label">Runtime <span class="card-icon">▷</span></div><strong id="runtime-state">Đang kiểm tra</strong><span id="runtime-pid" class="muted">PID —</span></article>
+    </div>
+    <div id="health-message" class="notice" role="status">Đang đọc trạng thái OpenClaw…</div>
+    <details id="health-details" class="technical" hidden><summary>Chi tiết kỹ thuật</summary><code id="health-code"></code></details>
+    <p class="polling-note">Tự cập nhật khoảng 7 giây · Giảm tần suất khi tab ẩn.</p>
   </section>
+  <section class="panel" id="runtime" aria-labelledby="runtime-title">
+    <div class="section-heading"><div><p class="eyebrow">RUNTIME CONTROL</p><h2 id="runtime-title">OpenClaw Gateway</h2></div><span id="runtime-badge" class="pill">Đang kiểm tra</span></div>
+    <dl class="runtime-metrics"><div><dt>PROCESS ID</dt><dd id="detail-pid">—</dd></div><div><dt>GATEWAY PORT</dt><dd id="detail-port">—</dd></div><div><dt>CLI VERSION</dt><dd id="detail-version">—</dd></div><div><dt>CURRENT MODEL</dt><dd id="detail-model">—</dd></div></dl>
+    <div class="config-path"><span>CONFIG PATH</span><code id="config-path">Chưa xác định</code></div>
+    <div class="runtime-footer"><div class="actions"><button class="button primary" data-runtime="start" type="button">▷ Start OpenClaw</button><button class="button secondary" data-runtime="restart" type="button">↻ Restart</button><button class="button danger" data-runtime="stop" type="button">□ Stop</button></div><span class="muted">Gateway service · Windows 10 / 11</span></div>
+    <div id="runtime-status" class="action-status" role="status" aria-live="polite"></div>
+    <details id="runtime-details" class="technical" hidden><summary>Chi tiết kỹ thuật</summary><code id="runtime-code"></code></details>
+    <details class="setup-help"><summary>Hướng dẫn khi chưa có Gateway service</summary><p>Cài OpenClaw và tạo cấu hình bằng <code>openclaw onboard</code>, sau đó cài service bằng <code>openclaw gateway install</code>. Bridge sử dụng service do OpenClaw quản lý.</p></details>
+  </section>
+  <section class="panel logs-panel" id="logs-panel" aria-labelledby="logs-title">
+    <div class="section-heading"><div><p class="eyebrow">OBSERVABILITY</p><h2 id="logs-title">Runtime logs <span id="log-source" class="pill">Chưa tải</span></h2></div><span id="log-updated" class="muted">Chưa cập nhật</span></div>
+    <div class="log-toolbar"><label for="log-lines">Số dòng <input id="log-lines" type="number" min="1" max="500" value="100"></label><label class="checkbox"><input id="log-autoscroll" type="checkbox" checked> Tự cuộn xuống</label><label class="checkbox"><input id="log-auto-refresh" type="checkbox"> Tự làm mới</label><button id="logs" class="button secondary small" type="button">↻ Làm mới logs</button></div>
+    <div id="log-status" role="status" class="muted">Tải tối đa 500 dòng. Thông tin xác thực được che trước khi gửi đến trình duyệt.</div>
+    <details id="log-details" class="technical" hidden><summary>Chi tiết kỹ thuật</summary><code id="log-code"></code></details>
+    <pre id="log-output" class="terminal" tabindex="0" aria-label="Nội dung runtime logs">Chọn “Làm mới logs” để đọc log OpenClaw.</pre>
+  </section>
+  <details class="panel connections" id="connections"><summary><span>⇄ Connections</span><span class="muted">OmniRoute · Phase 1</span></summary><p class="muted">Các thao tác kết nối và cấu hình hiện có.</p>
   <section class="section"><h2>Kết nối OmniRoute</h2>
     <form id="omni-form">
       <div class="form-group"><label for="baseUrl">Base URL</label><input type="url" id="baseUrl" value="<%= defaultBaseUrl %>" required></div>
@@ -30,13 +62,6 @@
       <button id="test" type="button">Gửi phép thử model</button><pre id="chat-result" aria-live="polite"></pre>
     </details>
   </section>
-  <section class="section"><h2>OpenClaw runtime</h2>
-    <p>Runtime sử dụng Gateway service của OpenClaw. Nếu chưa có service, chạy <code>openclaw gateway install</code> trong terminal trước.</p>
-    <div class="actions"><button data-runtime="start" type="button">Start</button><button data-runtime="stop" type="button">Stop</button><button data-runtime="restart" type="button">Restart</button></div>
-    <p id="runtime-status" aria-live="polite"></p>
-  </section>
-  <section class="section"><h2>Runtime logs</h2>
-    <label for="log-lines">Số dòng (1–500)</label><input id="log-lines" type="number" min="1" max="500" value="100">
-    <button id="logs" type="button">Xem logs</button><p id="log-source"></p><pre id="log-output" aria-live="polite"></pre>
-  </section>
+  </details>
+  <footer class="page-footer">OpenClaw OmniRoute Bridge <span>Connect. Run. Monitor.</span></footer>
 </main></body></html>
