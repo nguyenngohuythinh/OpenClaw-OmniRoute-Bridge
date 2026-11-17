@@ -5,3 +5,8 @@ dist
 .vscode
 .idea
 tmp
+
+.env.*
+!.env.example
+*.bak
+*.bridge.lock

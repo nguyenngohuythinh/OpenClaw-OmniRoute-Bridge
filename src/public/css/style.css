@@ -84,3 +84,15 @@ button:hover {
     background-color: #f8d7da;
     color: #721c24;
 }
+.subtitle { text-align: center; color: #536576; }
+#system-health { white-space: pre-line; line-height: 1.9; margin-bottom: 16px; }
+select { width: 100%; padding: 10px; }
+.actions { display: flex; gap: 10px; }
+button { margin-top: 8px; }
+button:disabled { opacity: .55; cursor: wait; }
+pre { white-space: pre-wrap; overflow-wrap: anywhere; max-height: 420px; overflow: auto; background: #f4f7f6; padding: 12px; }
+.checkbox { font-weight: normal; margin: 14px 0; }
+details { margin-top: 20px; }
+summary { cursor: pointer; }
+[hidden] { display: none !important; }
+@media (max-width: 600px) { body { padding: 8px; } .container { padding: 15px; } .section { padding: 12px; } .actions { flex-wrap: wrap; } }

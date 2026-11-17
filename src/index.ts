@@ -1,70 +1,13 @@
-import express from 'express';
-import path from 'path';
-import { fileURLToPath } from 'url';
-import { OmniRouteService } from './services/omniroute.js';
-import { OpenClawService } from './services/openclaw.js';
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
-const app = express();
-const port = 3000;
-
-app.set('view engine', 'ejs');
-app.set('views', path.join(__dirname, 'views'));
-
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
-app.use(express.static(path.join(__dirname, 'public')));
-
-const openClawService = new OpenClawService();
-
-app.get('/', (req, res) => {
-    res.render('index');
+import { createApp } from './server.js';
+import { bridgeConfig } from './config/bridge.config.js';
+if (!Number.isInteger(bridgeConfig.port) || bridgeConfig.port < 1 || bridgeConfig.port > 65535) throw new Error('PORT must be between 1 and 65535.');
+const server = createApp().listen(bridgeConfig.port, bridgeConfig.host, () => {
+  console.log(`Dashboard running at http://localhost:${bridgeConfig.port}`);
 });
-
-app.post('/api/omniroute/check', async (req, res) => {
-    const { baseUrl, apiKey } = req.body;
-    try {
-        const omniRoute = new OmniRouteService(baseUrl, apiKey);
-        const connected = await omniRoute.checkConnection();
-        if (connected) {
-            const models = await omniRoute.getModels();
-            res.json({ connected: true, models });
-        } else {
-            res.json({ connected: false, error: 'Không thể truy cập API' });
-        }
-    } catch (error: any) {
-        res.json({ connected: false, error: error.message });
-    }
+server.on('error', (error: NodeJS.ErrnoException) => {
+  console.error(error.code === 'EADDRINUSE' ? 'Bridge port is already in use. Set PORT or close the existing Bridge.' : 'Bridge cannot start. Check local port permissions.');
+  process.exitCode = 1;
 });
-
-app.post('/api/omniroute/test', async (req, res) => {
-    const { baseUrl, apiKey, model, prompt } = req.body;
-    try {
-        const omniRoute = new OmniRouteService(baseUrl, apiKey);
-        const result = await omniRoute.testChat(model, prompt);
-        res.json({ success: true, result });
-    } catch (error: any) {
-        res.status(500).json({ success: false, error: error.message });
-    }
-});
-
-app.get('/api/openclaw/status', async (req, res) => {
-    const installed = await openClawService.isInstalled();
-    res.json({ installed });
-});
-
-app.post('/api/openclaw/configure', async (req, res) => {
-    const { baseUrl, apiKey, model } = req.body;
-    try {
-        await openClawService.updateConfig(baseUrl, apiKey, model);
-        res.json({ message: 'Đã cập nhật cấu hình OpenClaw thành công và tạo bản sao lưu.' });
-    } catch (error: any) {
-        res.status(500).json({ message: 'Lỗi cấu hình: ' + error.message });
-    }
-});
-
-app.listen(port, () => {
-    console.log(`Dashboard running at http://localhost:${port}`);
+for (const signal of ['SIGINT', 'SIGTERM'] as const) process.on(signal, () => {
+  server.close(); server.closeIdleConnections();
 });
