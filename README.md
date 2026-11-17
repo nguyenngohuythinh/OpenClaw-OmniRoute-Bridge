@@ -128,6 +128,12 @@ Tên trường và định dạng cấu hình có thể thay đổi theo phiên 
 - Thu hồi và tạo lại key nếu nghi ngờ key đã bị lộ.
 - Kiểm tra nội dung mã nguồn và quyền truy cập trước khi chạy trên máy quan trọng.
 
+## OpenClaw Control Center — nhánh `feature/openclaw-control-center`
+
+Dashboard tập trung vào runtime OpenClaw: cards trạng thái, PID/port/version/model/config path, Start/Stop/Restart có loading và timeout, logs có nguồn/tự cuộn/tự làm mới, health polling 7 giây và giảm còn 45 giây khi tab ẩn. Thông báo lỗi dễ hiểu có phần chi tiết mã kỹ thuật. Tích hợp OmniRoute Phase 1 vẫn giữ nguyên trong Connections; chưa có Chat.
+
+Xem [hướng dẫn và kiểm chứng Control Center](docs/OPENCLAW-CONTROL-CENTER.md). Nhánh kế thừa Phase 1; PR mới dựa vào `feature/v2-foundation` trong khi PR Foundation chưa merge. Cần kiểm thử thực tế Gateway service trên Windows trước nghiệm thu.
+
 ## V2 Foundation — nhánh `feature/v2-foundation`
 
 Phase 1 đã bổ sung system health, CLI/runtime detection, cấu hình đã validate, Start/Stop/Restart và logs. Chưa triển khai chat/agents/tasks. Phép thử model hiện tại gọi OmniRoute trực tiếp để chẩn đoán API; đây không phải chat với OpenClaw.

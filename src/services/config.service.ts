@@ -8,14 +8,14 @@ import { ProcessService } from './process.service.js';
 
 export class ConfigService {
   constructor(private cli: ProcessService) {}
-  async getPath(): Promise<string> {
-    const result = jsonOutput(await this.cli.run(['config', 'file', '--json']));
+  async getPath(signal?: AbortSignal): Promise<string> {
+    const result = jsonOutput(await this.cli.run(['config', 'file', '--json'], {}, undefined, signal));
     if (typeof result.path !== 'string' || !path.isAbsolute(result.path)) throw new ApiError('CONFIG_PATH_INVALID', 'OpenClaw did not return an absolute config path.', 502);
     return result.path;
   }
-  async read(configPath: string): Promise<{ raw: string; data: any }> {
+  async read(configPath: string, signal?: AbortSignal): Promise<{ raw: string; data: any }> {
     try {
-      const raw = await fs.readFile(configPath, 'utf8');
+      const raw = await fs.readFile(configPath, { encoding: 'utf8', ...(signal ? { signal } : {}) });
       const data = JSON5.parse(raw);
       if (!data || typeof data !== 'object' || Array.isArray(data)) throw new Error();
       return { raw, data };

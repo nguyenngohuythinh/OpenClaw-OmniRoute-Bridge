@@ -6,27 +6,40 @@ import { ApiError } from '../types/api.js';
 // Only trusted server-side arguments reach this adapter. No credential is passed in argv.
 export class ProcessService {
   constructor(private command = bridgeConfig.openclawCommand) {}
-  run(args: string[], env: NodeJS.ProcessEnv = {}, timeout = bridgeConfig.cliTimeout): Promise<string> {
+  run(args: string[], env: NodeJS.ProcessEnv = {}, timeout = bridgeConfig.cliTimeout, signal?: AbortSignal): Promise<string> {
+    const timeoutError = () => new ApiError('OPENCLAW_TIMEOUT', 'OpenClaw command timed out. Refresh status before retrying; the service manager may still be completing the action.', 504);
+    if (signal?.aborted) return Promise.reject(timeoutError());
     return new Promise((resolve, reject) => {
       const child = spawn(this.command, args, {
         env: { ...process.env, NO_COLOR: '1', ...env }, windowsHide: true,
         stdio: ['ignore', 'pipe', 'pipe'],
       });
       let output = ''; let diagnostic = ''; let bytes = 0; let finished = false;
+      let stopping: ApiError | undefined; let killTimer: ReturnType<typeof setTimeout> | undefined;
       const finish = (error?: ApiError) => {
-        if (finished) return; finished = true; clearTimeout(timer);
+        if (finished) return; finished = true; clearTimeout(timer); clearTimeout(killTimer);
+        signal?.removeEventListener('abort', abort);
         if (error) reject(error); else resolve(output.trim());
       };
-      const terminate = () => {
-        if (process.platform === 'win32' && child.pid) execFile('taskkill.exe', ['/pid', String(child.pid), '/t', '/f'], { windowsHide: true }, () => {});
-        else child.kill();
+      const terminate = (error: ApiError) => {
+        if (finished || stopping) return;
+        stopping = error; clearTimeout(timer);
+        // End only this CLI process tree, never arbitrary Node/Gateway processes.
+        if (process.platform === 'win32' && child.pid) {
+          execFile('taskkill.exe', ['/pid', String(child.pid), '/t', '/f'], { windowsHide: true, timeout: 2000 }, () => finish(error));
+        } else child.kill();
+        killTimer = setTimeout(() => {
+          if (process.platform !== 'win32') child.kill('SIGKILL');
+          finish(error);
+        }, 2500);
       };
-      const timer = setTimeout(() => {
-        terminate(); finish(new ApiError('OPENCLAW_TIMEOUT', 'OpenClaw command timed out; refresh status before retrying.', 504));
-      }, timeout);
+      const timer = setTimeout(() => terminate(timeoutError()), timeout);
+      const abort = () => terminate(timeoutError());
+      signal?.addEventListener('abort', abort, { once: true });
+      if (signal?.aborted) abort();
       for (const stream of [child.stdout, child.stderr]) stream?.on('data', (chunk: Buffer) => {
         bytes += chunk.length;
-        if (bytes > 512000) { terminate(); finish(new ApiError('CLI_OUTPUT_LIMIT', 'OpenClaw output exceeded the allowed size.', 502)); }
+        if (bytes > 512000) { terminate(new ApiError('CLI_OUTPUT_LIMIT', 'OpenClaw output exceeded the allowed size.', 502)); }
         else if (stream === child.stdout) output += chunk.toString();
         else diagnostic += chunk.toString();
       });
@@ -34,6 +47,7 @@ export class ProcessService {
         error.code === 'ENOENT' ? 'OPENCLAW_NOT_INSTALLED' : 'OPENCLAW_COMMAND_FAILED',
         error.code === 'ENOENT' ? 'OpenClaw command was not found. Install OpenClaw or set OPENCLAW_COMMAND.' : 'Cannot execute OpenClaw. Check command permissions.', 503)));
       child.once('close', code => {
+        if (stopping) return finish(stopping);
         if (code === 0) return finish();
         const details = output + '\n' + diagnostic;
         const failure = /EADDRINUSE|address already in use|port.*already.*use/i.test(details)
